@@ -1,16 +1,14 @@
 import { Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
-import { Storage } from '@google-cloud/storage';
-
+import AWS from 'aws-sdk'; // Import AWS SDK
 import CustomError from '../errors/custom.error';
 import { logger } from '../utils/logger.utils';
 import { allOrders } from '../orders/fetch.orders';
+import { S3_BUCKET } from '../utils/config.utils'; // Add your S3 bucket name here
 
-// Create a new Google Cloud Storage client
-const storage = new Storage();
-const bucketName = 'connect-ash-bucket-1'; // Replace with your public bucket name
-const bucket = storage.bucket(bucketName);
+// Configure AWS S3
+const s3 = new AWS.S3();
 
 export const post = async (_request: Request, response: Response) => {
   try {
@@ -26,11 +24,11 @@ export const post = async (_request: Request, response: Response) => {
     const orderIds = orders.results.map(order => order.id);
     writeOrdersToLocalCSV(filePath, orderIds);
 
-    // Upload CSV to GCS
-    await uploadCSVToGCS(filePath, fileName);
+    // Upload CSV to AWS S3
+    await uploadCSVToS3(filePath, fileName);
 
-    logger.info(`Orders for ${today} have been written to ${fileName} in GCS bucket ${bucketName}`);
-    response.status(200).send(`Orders for ${today} have been written to ${fileName} in GCS bucket ${bucketName}`);
+    logger.info(`Orders for ${today} have been written to ${fileName} in S3 bucket ${S3_BUCKET}`);
+    response.status(200).send(`Orders for ${today} have been written to ${fileName} in S3 bucket ${S3_BUCKET}`);
   } catch (error) {
     throw new CustomError(
       500,
@@ -39,14 +37,23 @@ export const post = async (_request: Request, response: Response) => {
   }
 };
 
+// Function to write orders to a local CSV file
 const writeOrdersToLocalCSV = (filePath: string, orderIds: string[]) => {
   const csvContent = 'OrderID\n' + orderIds.join('\n');
   fs.writeFileSync(filePath, csvContent, { encoding: 'utf8' });
 };
 
-const uploadCSVToGCS = async (filePath: string, destFileName: string) => {
-  await bucket.upload(filePath, {
-    destination: destFileName,
-    gzip: true, // Optional: Compress the file during upload
-  });
+// Function to upload the CSV file to AWS S3
+const uploadCSVToS3 = async (filePath: string, fileName: string) => {
+  const fileStream = fs.createReadStream(filePath);
+
+  const uploadParams = {
+    Bucket: S3_BUCKET, // Replace with your AWS S3 bucket name
+    Key: `ashwin/${fileName}`, // Specify the path in your S3 bucket
+    Body: fileStream,
+    ContentType: 'text/csv', // Optional: specify content type
+  };
+
+  // Perform the upload to S3
+  await s3.upload(uploadParams).promise();
 };

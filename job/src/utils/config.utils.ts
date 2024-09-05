@@ -29,3 +29,4 @@ export const readConfiguration = () => {
 
   return envVars;
 };
+export const S3_BUCKET = process.env.S3_BUCKET || 'innovation-training-2024';
