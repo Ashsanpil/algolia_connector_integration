@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
-import AWS from 'aws-sdk'; // Import AWS SDK
+import AWS from 'aws-sdk'; 
 import CustomError from '../errors/custom.error';
 import { logger } from '../utils/logger.utils';
 import { allOrders } from '../orders/fetch.orders';
-import { S3_BUCKET } from '../utils/config.utils'; // Add your S3 bucket name here
+import { S3_BUCKET } from '../utils/config.utils'; 
 
 // Configure AWS S3
 const s3 = new AWS.S3();
@@ -48,7 +48,7 @@ const uploadCSVToS3 = async (filePath: string, fileName: string) => {
   const fileStream = fs.createReadStream(filePath);
 
   const uploadParams = {
-    Bucket: S3_BUCKET, // Replace with your AWS S3 bucket name
+    Bucket: S3_BUCKET, 
     Key: `ashwin/${fileName}`, // Specify the path in your S3 bucket
     Body: fileStream,
     ContentType: 'text/csv', // Optional: specify content type
