@@ -1,30 +1,39 @@
 import { ByProjectKeyRequestBuilder } from '@commercetools/platform-sdk/dist/declarations/src/generated/client/by-project-key-request-builder';
+import algoliasearch, { SearchClient } from 'algoliasearch'; // Updated import for version 4
 
-const CUSTOMER_CREATE_SUBSCRIPTION_KEY =
-  'myconnector-customerCreateSubscription';
+const PRODUCT_PUBLISH_SUBSCRIPTION_KEY = 'myconnector-productPublishSubscription';
 
-export async function createCustomerCreateSubscription(
+// Initialize Algolia client
+const initAlgoliaClient = (): SearchClient => {
+  const appId = process.env.ALGOLIA_APP_ID;
+  const apiKey = process.env.ALGOLIA_WRITE_API_KEY; // Use Write API Key here
+
+  if (!appId || !apiKey) {
+    throw new Error('Algolia credentials not found in environment variables');
+  }
+
+  return algoliasearch(appId, apiKey); // Ensure correct function call for version 4
+};
+
+export async function createProductPublishSubscription(
   apiRoot: ByProjectKeyRequestBuilder,
   topicName: string,
   projectId: string
 ): Promise<void> {
-  const {
-    body: { results: subscriptions },
-  } = await apiRoot
+  const { body: { results: subscriptions } } = await apiRoot
     .subscriptions()
     .get({
       queryArgs: {
-        where: `key = "${CUSTOMER_CREATE_SUBSCRIPTION_KEY}"`,
+        where: `key="${PRODUCT_PUBLISH_SUBSCRIPTION_KEY}"`,
       },
     })
     .execute();
 
   if (subscriptions.length > 0) {
     const subscription = subscriptions[0];
-
     await apiRoot
       .subscriptions()
-      .withKey({ key: CUSTOMER_CREATE_SUBSCRIPTION_KEY })
+      .withKey({ key: PRODUCT_PUBLISH_SUBSCRIPTION_KEY })
       .delete({
         queryArgs: {
           version: subscription.version,
@@ -37,7 +46,7 @@ export async function createCustomerCreateSubscription(
     .subscriptions()
     .post({
       body: {
-        key: CUSTOMER_CREATE_SUBSCRIPTION_KEY,
+        key: PRODUCT_PUBLISH_SUBSCRIPTION_KEY,
         destination: {
           type: 'GoogleCloudPubSub',
           topic: topicName,
@@ -45,8 +54,8 @@ export async function createCustomerCreateSubscription(
         },
         messages: [
           {
-            resourceTypeId: 'customer',
-            types: ['CustomerCreated'],
+            resourceTypeId: 'product',
+            types: ['ProductPublished'],
           },
         ],
       },
@@ -54,26 +63,23 @@ export async function createCustomerCreateSubscription(
     .execute();
 }
 
-export async function deleteCustomerCreateSubscription(
+export async function deleteProductPublishSubscription(
   apiRoot: ByProjectKeyRequestBuilder
 ): Promise<void> {
-  const {
-    body: { results: subscriptions },
-  } = await apiRoot
+  const { body: { results: subscriptions } } = await apiRoot
     .subscriptions()
     .get({
       queryArgs: {
-        where: `key = "${CUSTOMER_CREATE_SUBSCRIPTION_KEY}"`,
+        where: `key="${PRODUCT_PUBLISH_SUBSCRIPTION_KEY}"`,
       },
     })
     .execute();
 
   if (subscriptions.length > 0) {
     const subscription = subscriptions[0];
-
     await apiRoot
       .subscriptions()
-      .withKey({ key: CUSTOMER_CREATE_SUBSCRIPTION_KEY })
+      .withKey({ key: PRODUCT_PUBLISH_SUBSCRIPTION_KEY })
       .delete({
         queryArgs: {
           version: subscription.version,
