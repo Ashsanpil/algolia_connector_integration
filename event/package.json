@@ -38,6 +38,8 @@
     "@commercetools-backend/loggers": "^21.19.0",
     "@commercetools/platform-sdk": "^4.1.0",
     "@commercetools/sdk-client-v2": "^2.0.1",
+    "@types/algoliasearch": "^4.0.0",
+    "algoliasearch": "4",
     "body-parser": "^1.20.2",
     "csv-writer": "^1.6.0",
     "dotenv": "^16.3.1",
