@@ -1,20 +1,33 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { createApiRoot } from '../client/create.client';
-import { ByProjectKeyRequestBuilder } from '@commercetools/platform-sdk/dist/declarations/src/generated/client/by-project-key-request-builder';
-import { logger } from '../utils/logger.utils';
-import algoliasearch from 'algoliasearch'; // Importing the default package
-import { createProductPublishSubscription } from './actions';
+import { assertError, assertString } from '../utils/assert.utils';
+import { createCustomerCreateSubscription } from './actions';
 
-// Initialize Algolia client
-const algoliaClient = algoliasearch(
-  process.env.ALGOLIA_APP_ID || '',
-  process.env.ALGOLIA_WRITE_API_KEY || ''
-);
+const CONNECT_GCP_TOPIC_NAME_KEY = 'CONNECT_GCP_TOPIC_NAME';
+const CONNECT_GCP_PROJECT_ID_KEY = 'CONNECT_GCP_PROJECT_ID';
 
-// Initialize the index
-const algoliaIndex = algoliaClient.initIndex(process.env.ALGOLIA_INDEX_NAME || '');
+async function postDeploy(properties: Map<string, unknown>): Promise<void> {
+  const topicName = properties.get(CONNECT_GCP_TOPIC_NAME_KEY);
+  const projectId = properties.get(CONNECT_GCP_PROJECT_ID_KEY);
 
-export const postDeploy = async (topicName: string, projectId: string) => {
-  const apiRoot = createApiRoot(); // Assuming you have this function defined in your client module
-  await createProductPublishSubscription(apiRoot, topicName, projectId);
-  logger.info('Product publish subscription created successfully.');
-};
+  assertString(topicName, CONNECT_GCP_TOPIC_NAME_KEY);
+  assertString(projectId, CONNECT_GCP_PROJECT_ID_KEY);
+
+  const apiRoot = createApiRoot();
+  await createCustomerCreateSubscription(apiRoot, topicName, projectId);
+}
+
+async function run(): Promise<void> {
+  try {
+    const properties = new Map(Object.entries(process.env));
+    await postDeploy(properties);
+  } catch (error) {
+    assertError(error);
+    process.stderr.write(`Post-deploy failed: ${error.message}\n`);
+    process.exitCode = 1;
+  }
+}
+
+run();
