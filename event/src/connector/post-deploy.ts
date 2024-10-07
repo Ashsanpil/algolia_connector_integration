@@ -3,10 +3,7 @@ dotenv.config();
 
 import { createApiRoot } from '../client/create.client';
 import { assertError, assertString } from '../utils/assert.utils';
-import {
-  createGcpPubSubOrderSubscription,
-  createProductPublishSubscription, // Include the product publish subscription
-} from './actions';
+import { createProductPublishSubscription } from './actions';
 
 const CONNECT_GCP_TOPIC_NAME_KEY = 'CONNECT_GCP_TOPIC_NAME';
 const CONNECT_GCP_PROJECT_ID_KEY = 'CONNECT_GCP_PROJECT_ID';
@@ -14,16 +11,11 @@ const CONNECT_GCP_PROJECT_ID_KEY = 'CONNECT_GCP_PROJECT_ID';
 async function postDeploy(properties: Map<string, unknown>): Promise<void> {
   const apiRoot = createApiRoot();
 
-  // Get the Pub/Sub topic and project from the environment properties
   const topicName = properties.get(CONNECT_GCP_TOPIC_NAME_KEY);
   const projectId = properties.get(CONNECT_GCP_PROJECT_ID_KEY);
   assertString(topicName, CONNECT_GCP_TOPIC_NAME_KEY);
   assertString(projectId, CONNECT_GCP_PROJECT_ID_KEY);
 
-  // Create the order subscription in Pub/Sub
-  await createGcpPubSubOrderSubscription(apiRoot, topicName, projectId);
-
-  // Create the product publish subscription for Algolia
   await createProductPublishSubscription(apiRoot, topicName, projectId);
 }
 

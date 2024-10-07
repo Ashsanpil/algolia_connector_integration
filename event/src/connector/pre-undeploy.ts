@@ -3,11 +3,13 @@ dotenv.config();
 
 import { createApiRoot } from '../client/create.client';
 import { assertError } from '../utils/assert.utils';
-import { deleteProductPublishSubscription } from './actions';
+import { deleteSubscription } from './actions';
+
+const PRODUCT_PUBLISH_SUBSCRIPTION_KEY = 'myconnector-productPublishSubscription';
 
 async function preUndeploy(): Promise<void> {
   const apiRoot = createApiRoot();
-  await deleteProductPublishSubscription(apiRoot);
+  await deleteSubscription(apiRoot, PRODUCT_PUBLISH_SUBSCRIPTION_KEY);
 }
 
 async function run(): Promise<void> {
