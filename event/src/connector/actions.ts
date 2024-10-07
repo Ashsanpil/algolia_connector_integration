@@ -1,6 +1,11 @@
+import {
+  Destination,
+  GoogleCloudPubSubDestination,
+} from '@commercetools/platform-sdk';
 import { ByProjectKeyRequestBuilder } from '@commercetools/platform-sdk/dist/declarations/src/generated/client/by-project-key-request-builder';
-import algoliasearch, { SearchClient } from 'algoliasearch'; // Import Algolia client
+import algoliasearch, { SearchClient } from 'algoliasearch'; // Algolia integration
 
+const ORDER_SUBSCRIPTION_KEY = 'myconnector-orderSubscription';
 const PRODUCT_PUBLISH_SUBSCRIPTION_KEY = 'myconnector-productPublishSubscription';
 
 // Initialize Algolia client
@@ -15,49 +20,53 @@ const initAlgoliaClient = (): SearchClient => {
   return algoliasearch(appId, apiKey);
 };
 
-// Function to create Pub/Sub Subscription for Product Publishing
+// Function to create order subscription for Pub/Sub
+export async function createGcpPubSubOrderSubscription(
+  apiRoot: ByProjectKeyRequestBuilder,
+  topicName: string,
+  projectId: string
+): Promise<void> {
+  const destination: GoogleCloudPubSubDestination = {
+    type: 'GoogleCloudPubSub',
+    topic: topicName,
+    projectId,
+  };
+  await createSubscription(apiRoot, destination, ORDER_SUBSCRIPTION_KEY, 'order', 'OrderStateChanged');
+}
+
+// Function to create product publish subscription for Algolia
 export async function createProductPublishSubscription(
   apiRoot: ByProjectKeyRequestBuilder,
   topicName: string,
   projectId: string
 ): Promise<void> {
-  const { body: { results: subscriptions } } = await apiRoot
-    .subscriptions()
-    .get({
-      queryArgs: {
-        where: `key="${PRODUCT_PUBLISH_SUBSCRIPTION_KEY}"`,
-      },
-    })
-    .execute();
+  const destination: GoogleCloudPubSubDestination = {
+    type: 'GoogleCloudPubSub',
+    topic: topicName,
+    projectId,
+  };
+  await createSubscription(apiRoot, destination, PRODUCT_PUBLISH_SUBSCRIPTION_KEY, 'product', 'ProductPublished');
+}
 
-  if (subscriptions.length > 0) {
-    const subscription = subscriptions[0];
-    await apiRoot
-      .subscriptions()
-      .withKey({ key: PRODUCT_PUBLISH_SUBSCRIPTION_KEY })
-      .delete({
-        queryArgs: {
-          version: subscription.version,
-        },
-      })
-      .execute();
-  }
-
-  // Create the new subscription
+// Reusable function to create subscriptions
+async function createSubscription(
+  apiRoot: ByProjectKeyRequestBuilder,
+  destination: Destination,
+  subscriptionKey: string,
+  resourceTypeId: string,
+  messageType: string
+) {
+  await deleteSubscription(apiRoot, subscriptionKey);
   await apiRoot
     .subscriptions()
     .post({
       body: {
-        key: PRODUCT_PUBLISH_SUBSCRIPTION_KEY,
-        destination: {
-          type: 'GoogleCloudPubSub',
-          topic: topicName,
-          projectId,
-        },
+        key: subscriptionKey,
+        destination,
         messages: [
           {
-            resourceTypeId: 'product',
-            types: ['ProductPublished'],
+            resourceTypeId,
+            types: [messageType],
           },
         ],
       },
@@ -65,14 +74,18 @@ export async function createProductPublishSubscription(
     .execute();
 }
 
-export async function deleteProductPublishSubscription(
-  apiRoot: ByProjectKeyRequestBuilder
+// Function to delete a subscription by key
+async function deleteSubscription(
+  apiRoot: ByProjectKeyRequestBuilder,
+  subscriptionKey: string
 ): Promise<void> {
-  const { body: { results: subscriptions } } = await apiRoot
+  const {
+    body: { results: subscriptions },
+  } = await apiRoot
     .subscriptions()
     .get({
       queryArgs: {
-        where: `key="${PRODUCT_PUBLISH_SUBSCRIPTION_KEY}"`,
+        where: `key="${subscriptionKey}"`,
       },
     })
     .execute();
@@ -81,7 +94,7 @@ export async function deleteProductPublishSubscription(
     const subscription = subscriptions[0];
     await apiRoot
       .subscriptions()
-      .withKey({ key: PRODUCT_PUBLISH_SUBSCRIPTION_KEY })
+      .withKey({ key: subscriptionKey })
       .delete({
         queryArgs: {
           version: subscription.version,

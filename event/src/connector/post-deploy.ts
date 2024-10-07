@@ -1,39 +1,41 @@
-import { createApiRoot } from '../client/create.client';
-import { logger } from '../utils/logger.utils';
-import { createProductPublishSubscription } from './actions';
-import algoliasearch from 'algoliasearch'; // Importing the default package
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Initialize Algolia client
-const algoliaClient = algoliasearch(
-  process.env.ALGOLIA_APP_ID || '',
-  process.env.ALGOLIA_WRITE_API_KEY || ''
-);
+import { createApiRoot } from '../client/create.client';
+import { assertError, assertString } from '../utils/assert.utils';
+import {
+  createGcpPubSubOrderSubscription,
+  createProductPublishSubscription, // Include the product publish subscription
+} from './actions';
 
-// Initialize the index
-const algoliaIndex = algoliaClient.initIndex(process.env.ALGOLIA_INDEX_NAME || '');
+const CONNECT_GCP_TOPIC_NAME_KEY = 'CONNECT_GCP_TOPIC_NAME';
+const CONNECT_GCP_PROJECT_ID_KEY = 'CONNECT_GCP_PROJECT_ID';
 
-// Function to handle both Algolia and Pub/Sub integration
-export const postDeploy = async (properties: Map<string, unknown>) => {
+async function postDeploy(properties: Map<string, unknown>): Promise<void> {
+  const apiRoot = createApiRoot();
+
+  // Get the Pub/Sub topic and project from the environment properties
+  const topicName = properties.get(CONNECT_GCP_TOPIC_NAME_KEY);
+  const projectId = properties.get(CONNECT_GCP_PROJECT_ID_KEY);
+  assertString(topicName, CONNECT_GCP_TOPIC_NAME_KEY);
+  assertString(projectId, CONNECT_GCP_PROJECT_ID_KEY);
+
+  // Create the order subscription in Pub/Sub
+  await createGcpPubSubOrderSubscription(apiRoot, topicName, projectId);
+
+  // Create the product publish subscription for Algolia
+  await createProductPublishSubscription(apiRoot, topicName, projectId);
+}
+
+async function run(): Promise<void> {
   try {
-    const apiRoot = createApiRoot();
-
-    const topicName = properties.get('CONNECT_GCP_TOPIC_NAME');
-    const projectId = properties.get('CONNECT_GCP_PROJECT_ID');
-    if (!topicName || !projectId) {
-      throw new Error('Topic name or project ID not found');
-    }
-
-    // Create Pub/Sub Subscription
-    await createProductPublishSubscription(apiRoot, topicName as string, projectId as string);
-    logger.info('Product publish subscription created successfully.');
-
-    // Log Algolia index details (for verification)
-    logger.info('Algolia Index initialized:', algoliaIndex.indexName);
-
+    const properties = new Map(Object.entries(process.env));
+    await postDeploy(properties);
   } catch (error) {
-    logger.error('Post-deploy process failed:', error);
-    throw error;
+    assertError(error);
+    process.stderr.write(`Post-deploy failed: ${error.message}\n`);
+    process.exitCode = 1;
   }
-};
+}
+
+run();
