@@ -15,11 +15,19 @@ const algoliaIndex = algoliaClient.initIndex(process.env.ALGOLIA_INDEX_NAME || '
 
 export const post = async (request: Request, response: Response) => {
   try {
+    // Log when an event message is received
+    logger.info('Received an event from Pub/Sub.');
+
     if (!request.body || !request.body.message) {
       throw new CustomError(400, 'Bad request: Invalid Pub/Sub message');
     }
 
     const pubSubMessage = request.body.message;
+
+    // Log base64 encoded message data
+    logger.info(`Pub/Sub message received with data: ${pubSubMessage.data}`);
+
+    // Decode the message
     const decodedData = pubSubMessage.data
       ? Buffer.from(pubSubMessage.data, 'base64').toString().trim()
       : undefined;
@@ -28,17 +36,26 @@ export const post = async (request: Request, response: Response) => {
       throw new CustomError(400, 'Bad request: Empty message data');
     }
 
+    // Log decoded message data
+    logger.info(`Decoded message data: ${decodedData}`);
+
     const jsonData = JSON.parse(decodedData);
     const productId = jsonData.resource.id;
 
+    // Log product ID to confirm successful data extraction
     logger.info(`Processing product with ID: ${productId}`);
 
+    // Fetch the product from commercetools
     const { body: product } = await createApiRoot()
       .products()
       .withId({ ID: productId })
       .get()
       .execute();
 
+    // Log when product is successfully fetched from commercetools
+    logger.info(`Successfully fetched product details for ID: ${productId}`);
+
+    // Create an Algolia record from the product data
     const algoliaRecord = {
       objectID: product.id,
       productKey: product.key,
@@ -60,15 +77,25 @@ export const post = async (request: Request, response: Response) => {
       },
     };
 
+    // Log Algolia record creation
+    logger.info(`Algolia record created for product ID: ${productId}`);
+
+    // Save the product to Algolia
     await algoliaIndex.saveObject(algoliaRecord);
 
+    // Log successful indexing in Algolia
     logger.info(`Product ${productId} successfully indexed in Algolia`);
+
+    // Send a response to acknowledge the request
     response.status(204).send();
   } catch (error) {
+    // Log any errors encountered during processing
     logger.error('Error processing product:', error);
+
     if (error instanceof CustomError) {
       throw error;
     }
+
     throw new CustomError(500, `Error processing product: ${error}`);
   }
 };
