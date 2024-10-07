@@ -40,10 +40,10 @@ export const post = async (request: Request, response: Response) => {
     logger.info(`Decoded message data: ${decodedData}`);
 
     const jsonData = JSON.parse(decodedData);
-    const productId = jsonData.productId.id;
+    const productId = jsonData.productProjection.id;
 
     // Log product ID to confirm successful data extraction
-    logger.info(`Processing product with ID: ${productId}`);
+    logger.info(`Processing product with ID: ${jsonData.productProjection.id}`);
 
     // Fetch the product from commercetools
     const { body: product } = await createApiRoot()
