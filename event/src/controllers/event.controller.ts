@@ -40,7 +40,7 @@ export const post = async (request: Request, response: Response) => {
     logger.info(`Decoded message data: ${decodedData}`);
 
     const jsonData = JSON.parse(decodedData);
-    const productId = jsonData.resource.id;
+    const productId = jsonData.productId.id;
 
     // Log product ID to confirm successful data extraction
     logger.info(`Processing product with ID: ${productId}`);
