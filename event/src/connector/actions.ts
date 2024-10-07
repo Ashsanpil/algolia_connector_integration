@@ -1,20 +1,21 @@
 import { ByProjectKeyRequestBuilder } from '@commercetools/platform-sdk/dist/declarations/src/generated/client/by-project-key-request-builder';
-import algoliasearch, { SearchClient } from 'algoliasearch'; // Updated import for version 4
+import algoliasearch, { SearchClient } from 'algoliasearch'; // Import Algolia client
 
 const PRODUCT_PUBLISH_SUBSCRIPTION_KEY = 'myconnector-productPublishSubscription';
 
 // Initialize Algolia client
 const initAlgoliaClient = (): SearchClient => {
   const appId = process.env.ALGOLIA_APP_ID;
-  const apiKey = process.env.ALGOLIA_WRITE_API_KEY; // Use Write API Key here
+  const apiKey = process.env.ALGOLIA_WRITE_API_KEY;
 
   if (!appId || !apiKey) {
     throw new Error('Algolia credentials not found in environment variables');
   }
 
-  return algoliasearch(appId, apiKey); // Ensure correct function call for version 4
+  return algoliasearch(appId, apiKey);
 };
 
+// Function to create Pub/Sub Subscription for Product Publishing
 export async function createProductPublishSubscription(
   apiRoot: ByProjectKeyRequestBuilder,
   topicName: string,
@@ -42,6 +43,7 @@ export async function createProductPublishSubscription(
       .execute();
   }
 
+  // Create the new subscription
   await apiRoot
     .subscriptions()
     .post({
