@@ -52,6 +52,26 @@ export const post = async (request: Request, response: Response) => {
       .get()
       .execute();
 
+    // Fetch the product type name using the productTypeId
+    const { body: productType } = await createApiRoot()
+      .productTypes()
+      .withId({ ID: product.productType.id })
+      .get()
+      .execute();
+
+    // Fetch the category names using the category IDs
+    const categoryIds = product.masterData.current.categories.map((cat) => cat.id);
+    const categoryNames = await Promise.all(
+      categoryIds.map(async (categoryId) => {
+        const { body: category } = await createApiRoot()
+          .categories()
+          .withId({ ID: categoryId })
+          .get()
+          .execute();
+        return category.name;
+      })
+    );
+
     // Log when product is successfully fetched from commercetools
     logger.info(`Successfully fetched product details for ID: ${productId}`);
 
@@ -59,10 +79,10 @@ export const post = async (request: Request, response: Response) => {
     const algoliaRecord = {
       objectID: product.id,
       productKey: product.key,
-      productType: product.productType.id,
+      productType: productType.name, // Use product type name instead of ID
       name: product.masterData.current.name,
       description: product.masterData.current.description,
-      categories: product.masterData.current.categories.map((cat) => cat.id),
+      categories: categoryNames, // Use category names instead of IDs
       variants: product.masterData.current.variants.map((variant) => ({
         id: variant.id,
         sku: variant.sku,
