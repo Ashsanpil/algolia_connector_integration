@@ -1,17 +1,8 @@
 import { Request, Response } from 'express';
-import { createApiRoot } from '../client/create.client';
+import { createAlgoliaRecord } from '../services/product.service';
+import { saveProductToAlgolia } from '../client/algolia.client';
 import CustomError from '../errors/custom.error';
 import { logger } from '../utils/logger.utils';
-import algoliasearch from 'algoliasearch'; // Import from the main package
-
-// Initialize the Algolia client
-const algoliaClient = algoliasearch(
-  process.env.ALGOLIA_APP_ID || '',
-  process.env.ALGOLIA_WRITE_API_KEY || '' // Use Write API Key for indexing
-);
-
-// Initialize the index using the algoliaClient instance
-const algoliaIndex = algoliaClient.initIndex(process.env.ALGOLIA_INDEX_NAME || '');
 
 export const post = async (request: Request, response: Response) => {
   try {
@@ -24,9 +15,6 @@ export const post = async (request: Request, response: Response) => {
 
     const pubSubMessage = request.body.message;
 
-    // Log base64 encoded message data
-    logger.info(`Pub/Sub message received with data: ${pubSubMessage.data}`);
-
     // Decode the message
     const decodedData = pubSubMessage.data
       ? Buffer.from(pubSubMessage.data, 'base64').toString().trim()
@@ -36,72 +24,17 @@ export const post = async (request: Request, response: Response) => {
       throw new CustomError(400, 'Bad request: Empty message data');
     }
 
-    // Log decoded message data
-    logger.info(`Decoded message data: ${decodedData}`);
-
     const jsonData = JSON.parse(decodedData);
     const productId = jsonData.productProjection.id;
 
     // Log product ID to confirm successful data extraction
-    logger.info(`Processing product with ID: ${jsonData.productProjection.id}`);
+    logger.info(`Processing product with ID: ${productId}`);
 
-    // Fetch the product from commercetools
-    const { body: product } = await createApiRoot()
-      .products()
-      .withId({ ID: productId })
-      .get()
-      .execute();
+    // Create Algolia record from product data
+    const algoliaRecord = await createAlgoliaRecord(productId);
 
-    // Fetch the product type name using the productTypeId
-    const { body: productType } = await createApiRoot()
-      .productTypes()
-      .withId({ ID: product.productType.id })
-      .get()
-      .execute();
-
-    // Fetch the category names using the category IDs
-    const categoryIds = product.masterData.current.categories.map((cat) => cat.id);
-    const categoryNames = await Promise.all(
-      categoryIds.map(async (categoryId) => {
-        const { body: category } = await createApiRoot()
-          .categories()
-          .withId({ ID: categoryId })
-          .get()
-          .execute();
-        return category.name;
-      })
-    );
-
-    // Log when product is successfully fetched from commercetools
-    logger.info(`Successfully fetched product details for ID: ${productId}`);
-
-    // Create an Algolia record from the product data
-    const algoliaRecord = {
-      objectID: product.id,
-      productKey: product.key,
-      productType: productType.name, // Use product type name instead of ID
-      name: product.masterData.current.name,
-      description: product.masterData.current.description,
-      categories: categoryNames, // Use category names instead of IDs
-      variants: product.masterData.current.variants.map((variant) => ({
-        id: variant.id,
-        sku: variant.sku,
-        prices: variant.prices,
-        attributes: variant.attributes,
-      })),
-      masterVariant: {
-        id: product.masterData.current.masterVariant.id,
-        sku: product.masterData.current.masterVariant.sku,
-        prices: product.masterData.current.masterVariant.prices,
-        attributes: product.masterData.current.masterVariant.attributes,
-      },
-    };
-
-    // Log Algolia record creation
-    logger.info(`Algolia record created for product ID: ${productId}`);
-
-    // Save the product to Algolia
-    await algoliaIndex.saveObject(algoliaRecord);
+    // Save product to Algolia
+    await saveProductToAlgolia(algoliaRecord);
 
     // Log successful indexing in Algolia
     logger.info(`Product ${productId} successfully indexed in Algolia`);
