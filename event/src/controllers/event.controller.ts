@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { createAlgoliaRecord } from '../services/product.service';
 import { saveProductToAlgolia } from '../client/algolia.client';
-import CustomError, { BadRequestError, InternalServerError } from '../errors/custom.error';
+import CustomError from '../errors/custom.error';
 import { logger } from '../utils/logger.utils';
 
 export const post = async (request: Request, response: Response) => {
@@ -10,7 +10,7 @@ export const post = async (request: Request, response: Response) => {
     logger.info('Received an event from Pub/Sub.');
 
     if (!request.body || !request.body.message) {
-      throw new BadRequestError('Bad request: Invalid Pub/Sub message');
+      throw new CustomError(400, 'Bad request: Invalid Pub/Sub message');
     }
 
     const pubSubMessage = request.body.message;
@@ -21,7 +21,7 @@ export const post = async (request: Request, response: Response) => {
       : undefined;
 
     if (!decodedData) {
-      throw new BadRequestError('Bad request: Empty message data');
+      throw new CustomError(400, 'Bad request: Empty message data');
     }
 
     const jsonData = JSON.parse(decodedData);
@@ -46,19 +46,9 @@ export const post = async (request: Request, response: Response) => {
     logger.error('Error processing product:', error);
 
     if (error instanceof CustomError) {
-      // Send the custom error message back in the response
-      return response.status(error.statusCode).json({
-        message: error.message,
-        errors: error.errors,
-      });
+      throw error;
     }
 
-    // Type narrowing: handle unknown errors by casting them as an Error
-    const internalError = new InternalServerError(
-      error instanceof Error ? error.message : 'Unknown error'
-    );
-    response.status(internalError.statusCode).json({
-      message: internalError.message,
-    });
+    throw new CustomError(500, `Error processing product: ${error}`);
   }
 };
