@@ -1,4 +1,4 @@
-import { getProductById, getProductTypeById, getCategoryNamesByIds } from '../repositories/product.repository';
+import { getProductById, getProductTypeById, getCategoryNamesByIds } from '../repository/product.repository';
 
 /**
  * Create an Algolia record from commercetools product data.
