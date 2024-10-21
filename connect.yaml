@@ -33,3 +33,6 @@ deployAs:
         - key: ALGOLIA_INDEX_NAME
           description: Algolia index name
           required: true
+        - key: ALGOLIA_INDEX_CONFIG
+          description: Algolia index configuration (as JSON)
+          required: false
