@@ -5,20 +5,26 @@ import { logger } from '../utils/logger.utils';
 const client = algoliasearch(process.env.ALGOLIA_APP_ID!, process.env.ALGOLIA_WRITE_API_KEY!);
 
 // Function to create the Algolia index if it doesn't exist
-export const createIndex = async (indexName: string, config?: object) => {
+export const createIndex = async (indexName: string | undefined, config?: object) => {
   try {
-    const index = client.initIndex(indexName);
+    // Use environment variables as fallback if the request doesn't provide them
+    const finalIndexName = indexName || process.env.ALGOLIA_INDEX_NAME!;
+    const finalIndexConfig = config || (process.env.ALGOLIA_INDEX_CONFIG ? JSON.parse(process.env.ALGOLIA_INDEX_CONFIG) : {});
+
+    const index = client.initIndex(finalIndexName);
 
     // Check if the index already exists
     await index.getSettings();
-    logger.info(`Index ${indexName} already exists.`);
+    logger.info(`Index ${finalIndexName} already exists.`);
   } catch (error) {
-    // Use type narrowing to check if 'error' has a 'status' property
     if (isAlgoliaError(error) && error.status === 404) {
-      // If index doesn't exist, create it
-      const index = client.initIndex(indexName);
-      await index.setSettings(config || {});
-      logger.info(`Index ${indexName} created with configuration:`, config);
+      const finalIndexName = indexName || process.env.ALGOLIA_INDEX_NAME!;
+      const finalIndexConfig = config || (process.env.ALGOLIA_INDEX_CONFIG ? JSON.parse(process.env.ALGOLIA_INDEX_CONFIG) : {});
+      
+      // Create the index if it doesn't exist
+      const index = client.initIndex(finalIndexName);
+      await index.setSettings(finalIndexConfig || {});
+      logger.info(`Index ${finalIndexName} created with configuration:`, finalIndexConfig);
     } else {
       throw error;
     }

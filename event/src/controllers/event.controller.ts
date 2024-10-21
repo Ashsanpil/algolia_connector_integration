@@ -30,17 +30,15 @@ export const post = async (request: Request, response: Response) => {
     // Log product ID to confirm successful data extraction
     logger.info(`Processing product with ID: ${productId}`);
 
-    // Extract the Algolia index name and configuration from the environment or request config
-    const indexName = process.env.ALGOLIA_INDEX_NAME || request.body.indexName;
-    const indexConfig = process.env.ALGOLIA_INDEX_CONFIG
-      ? JSON.parse(process.env.ALGOLIA_INDEX_CONFIG)
-      : request.body.indexConfig;
-
-    // Check if the index exists, and if not, create a new one with the user-provided configuration
-    await createIndex(indexName, indexConfig);
+    // Extract index details from the request body
+    const indexName = request.body.indexName;
+    const indexConfig = request.body.indexConfig;
 
     // Create Algolia record from product data
     const algoliaRecord = await createAlgoliaRecord(productId);
+
+    // Pass the index name and configuration to the client
+    await createIndex(indexName, indexConfig);
 
     // Save product to Algolia
     await saveProductToAlgolia(algoliaRecord);
@@ -55,11 +53,9 @@ export const post = async (request: Request, response: Response) => {
     logger.error('Error processing product:', error);
 
     if (error instanceof CustomError) {
-      // Ensure statusCode is a number before passing it to response.status
       const statusCode = typeof error.statusCode === 'number' ? error.statusCode : 500;
       response.status(statusCode).json({ message: error.message });
     } else {
-      // Handle generic errors
       response.status(500).json({ message: `Error processing product: ${String(error)}` });
     }
   }
