@@ -1,19 +1,19 @@
 import { getProductById, getProductTypeById, getCategoryNamesByIds } from '../repository/product.repository';
+import { ProductNotFoundError } from '../errors/custom.errors.extended';
 
 /**
  * Create an Algolia record from commercetools product data.
  */
 export const createAlgoliaRecord = async (productId: string) => {
-  // Fetch product details
   const product = await getProductById(productId);
 
-  // Fetch product type name using the productTypeId
-  const productType = await getProductTypeById(product.productType.id);
+  if (!product) {
+    throw new ProductNotFoundError(productId);
+  }
 
-  // Fetch category names using category IDs
+  const productType = await getProductTypeById(product.productType.id);
   const categoryNames = await getCategoryNamesByIds(product.masterData.current.categories.map((cat) => cat.id));
 
-  // Create an Algolia record from the product data
   const algoliaRecord = {
     objectID: product.id,
     productKey: product.key,
