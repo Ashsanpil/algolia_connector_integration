@@ -1,9 +1,9 @@
 import { ByProjectKeyRequestBuilder } from '@commercetools/platform-sdk/dist/declarations/src/generated/client/by-project-key-request-builder';
-import { Destination, GoogleCloudPubSubDestination } from '@commercetools/platform-sdk';
+import { GoogleCloudPubSubDestination } from '@commercetools/platform-sdk';
 
-const PRODUCT_PUBLISH_UNPUBLISH_SUBSCRIPTION_KEY = 'myconnector-productPublishUnpublishSubscription';
+const PRODUCT_PUBLISH_SUBSCRIPTION_KEY = 'myconnector-productPublishSubscription';
 
-export async function createProductPublishUnpublishSubscription(
+export async function createProductPublishSubscription(
   apiRoot: ByProjectKeyRequestBuilder,
   topicName: string,
   projectId: string
@@ -14,18 +14,18 @@ export async function createProductPublishUnpublishSubscription(
     projectId,
   };
 
-  await deleteSubscription(apiRoot, PRODUCT_PUBLISH_UNPUBLISH_SUBSCRIPTION_KEY);
+  await deleteSubscription(apiRoot, PRODUCT_PUBLISH_SUBSCRIPTION_KEY);
 
   await apiRoot
     .subscriptions()
     .post({
       body: {
-        key: PRODUCT_PUBLISH_UNPUBLISH_SUBSCRIPTION_KEY,
+        key: PRODUCT_PUBLISH_SUBSCRIPTION_KEY,
         destination,
         messages: [
           {
             resourceTypeId: 'product',
-            types: ['ProductPublished', 'ProductUnpublished'],  // Handle both published and unpublished
+            types: ['ProductPublished'],
           },
         ],
       },

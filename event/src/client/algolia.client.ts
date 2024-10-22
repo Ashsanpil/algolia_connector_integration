@@ -37,13 +37,6 @@ export const saveProductToAlgolia = async (record: object) => {
   await index.saveObject(record);
 };
 
-// Function to remove a product from the Algolia index
-export const removeProductFromAlgolia = async (productId: string) => {
-  const index = client.initIndex(process.env.ALGOLIA_INDEX_NAME!);
-  await index.deleteObject(productId);
-  logger.info(`Product with ID ${productId} removed from Algolia index.`);
-};
-
 // Type guard to check if the error is from Algolia
 function isAlgoliaError(error: any): error is { status: number } {
   return typeof error === 'object' && error !== null && 'status' in error;
