@@ -1,5 +1,5 @@
 import { ByProjectKeyRequestBuilder } from '@commercetools/platform-sdk/dist/declarations/src/generated/client/by-project-key-request-builder';
-import { Destination, GoogleCloudPubSubDestination } from '@commercetools/platform-sdk';
+import { GoogleCloudPubSubDestination } from '@commercetools/platform-sdk';
 
 const PRODUCT_PUBLISH_SUBSCRIPTION_KEY = 'myconnector-productPublishSubscription';
 
@@ -25,7 +25,7 @@ export async function createProductPublishSubscription(
         messages: [
           {
             resourceTypeId: 'product',
-            types: ['ProductPublished'],
+            types: ['ProductPublished','ProductUnpublished'],
           },
         ],
       },
