@@ -1,10 +1,9 @@
-// controllers/event.controller.ts
 import { Request, Response } from 'express';
 import { createAlgoliaRecord } from '../services/product.service';
-import { saveProductToAlgolia, createIndex } from '../client/algolia.client';
+import { saveProductToAlgolia, removeProductFromAlgolia, createIndex } from '../client/algolia.client';
 import CustomError from '../errors/custom.error';
 import { logger } from '../utils/logger.utils';
-import { ProductNotFoundError, InvalidProductDataError, AlgoliaIndexingError } from '../errors/custom.errors.extended';
+import { ProductNotFoundError, InvalidProductDataError } from '../errors/custom.errors.extended';
 
 export const post = async (request: Request, response: Response) => {
   try {
@@ -25,6 +24,7 @@ export const post = async (request: Request, response: Response) => {
 
     const jsonData = JSON.parse(decodedData);
     const productId = jsonData.productProjection?.id;
+    const isPublished = jsonData.productProjection?.masterData?.published;
 
     if (!productId) {
       throw new ProductNotFoundError('unknown');
@@ -35,11 +35,16 @@ export const post = async (request: Request, response: Response) => {
     const indexName = request.body.indexName;
     const indexConfig = request.body.indexConfig;
 
-    const algoliaRecord = await createAlgoliaRecord(productId);
-    await createIndex(indexName, indexConfig);
-    await saveProductToAlgolia(algoliaRecord);
-
-    logger.info(`Product ${productId} successfully indexed in Algolia`);
+    // Handle published/unpublished logic
+    if (isPublished) {
+      const algoliaRecord = await createAlgoliaRecord(productId);
+      await createIndex(indexName, indexConfig);
+      await saveProductToAlgolia(algoliaRecord);
+      logger.info(`Product ${productId} successfully indexed in Algolia.`);
+    } else {
+      await removeProductFromAlgolia(productId);
+      logger.info(`Product ${productId} has been unpublished and removed from Algolia index.`);
+    }
 
     response.status(204).send();
   } catch (error) {
