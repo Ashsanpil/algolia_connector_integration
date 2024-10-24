@@ -23,8 +23,8 @@ export const post = async (request: Request, response: Response) => {
     }
 
     const jsonData = JSON.parse(decodedData);
-    const productId = jsonData.productProjection?.id;
-    const isPublished = jsonData.productProjection?.published;
+    const productId = jsonData.resource?.id;
+    const eventType = jsonData.type;
 
     logger.info(`Decoded Data: ${decodedData}`);
 
@@ -37,13 +37,15 @@ export const post = async (request: Request, response: Response) => {
     // Ensure the index exists or is created with proper configuration if it doesn't exist
     await ensureIndexExists();
 
-    if (isPublished) {
+    if (eventType === 'ProductPublished') {
       const algoliaRecord = await createAlgoliaRecord(productId);
       await saveProductToAlgolia(algoliaRecord);
       logger.info(`Product ${productId} successfully indexed in Algolia.`);
-    } else {
+    } else if (eventType === 'ProductUnpublished') {
       await removeProductFromAlgolia(productId);
       logger.info(`Product ${productId} has been unpublished and removed from Algolia index.`);
+    } else {
+      logger.warn(`Unhandled event type: ${eventType}`);
     }
 
     response.status(204).send('HIT 👌');
