@@ -26,6 +26,8 @@ export const post = async (request: Request, response: Response) => {
     const productId = jsonData.productProjection?.id;
     const isPublished = jsonData.productProjection?.published;
 
+    logger.info(`Decoded Data: ${decodedData}`);
+
     if (!productId) {
       throw new ProductNotFoundError('unknown');
     }
