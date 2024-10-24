@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { createAlgoliaRecord } from '../services/product.service';
-import { saveProductToAlgolia, removeProductFromAlgolia, createIndex } from '../client/algolia.client';
+import { saveProductToAlgolia, removeProductFromAlgolia, ensureIndexExists } from '../client/algolia.client';
 import CustomError from '../errors/custom.error';
 import { logger } from '../utils/logger.utils';
 import { ProductNotFoundError, InvalidProductDataError } from '../errors/custom.errors.extended';
@@ -24,7 +24,7 @@ export const post = async (request: Request, response: Response) => {
 
     const jsonData = JSON.parse(decodedData);
     const productId = jsonData.productProjection?.id;
-    const isPublished = jsonData.productProjection?.masterData?.published;
+    const isPublished = jsonData.productProjection?.published;
 
     if (!productId) {
       throw new ProductNotFoundError('unknown');
@@ -32,13 +32,11 @@ export const post = async (request: Request, response: Response) => {
 
     logger.info(`Processing product with ID: ${productId}`);
 
-    const indexName = request.body.indexName;
-    const indexConfig = request.body.indexConfig;
+    // Ensure the index exists or is created with proper configuration if it doesn't exist
+    await ensureIndexExists();
 
-    // Handle published/unpublished logic
     if (isPublished) {
       const algoliaRecord = await createAlgoliaRecord(productId);
-      await createIndex(indexName, indexConfig);
       await saveProductToAlgolia(algoliaRecord);
       logger.info(`Product ${productId} successfully indexed in Algolia.`);
     } else {
@@ -46,7 +44,7 @@ export const post = async (request: Request, response: Response) => {
       logger.info(`Product ${productId} has been unpublished and removed from Algolia index.`);
     }
 
-    response.status(204).send();
+    response.status(204).send('HIT 👌');
   } catch (error) {
     logger.error('Error processing product:', error);
 
