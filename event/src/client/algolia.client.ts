@@ -21,7 +21,8 @@ export const ensureIndexExists = async () => {
       await index.setSettings(finalIndexConfig);
       logger.info(`Index ${finalIndexName} created with configuration:`, finalIndexConfig);
     } else {
-      throw error;
+      // Throw the error if it's unexpected
+      throw new Error(`Unexpected error occurred: ${JSON.stringify(error)}`);
     }
   }
 };
