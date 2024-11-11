@@ -1,6 +1,6 @@
 deployAs:
   - name: event
-    applicationType: event
+    applicationType: algolia_connector
     endpoint: /event
     scripts:
       postDeploy: npm install && npm run build && npm run connector:post-deploy
