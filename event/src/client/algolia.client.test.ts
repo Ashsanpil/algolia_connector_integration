@@ -1,4 +1,3 @@
-import algoliasearch, { SearchClient } from 'algoliasearch';
 import { ensureIndexExists, saveProductToAlgolia, removeProductFromAlgolia } from './algolia.client';
 import { logger } from '../utils/logger.utils';
 
